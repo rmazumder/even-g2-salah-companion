@@ -150,3 +150,39 @@ select {
   color: var(--color-text-dim);
   margin: 8px 0 0;
 }
+
+/* City search */
+.search-label {
+  margin-top: 16px;
+}
+input[type='search'] {
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.search-result {
+  text-align: left;
+  font: inherit;
+  font-size: 15px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.search-result:hover {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+}

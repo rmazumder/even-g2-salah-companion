@@ -6,6 +6,7 @@
  */
 import { CITIES } from './cities'
 import { detectLocation, deviceTimeZone } from './location'
+import { searchCities, type GeocodeResult } from './geocode'
 import { buildPreview } from './prayer'
 import {
   MADHABS,
@@ -33,6 +34,10 @@ export function mountPhoneUI(
   getCountry: () => string | undefined = () => undefined,
 ): PhoneUI {
   let status = '' // transient message under the location toggle
+  let searchStatus = '' // transient message under the city search box
+  let searchResults: GeocodeResult[] = []
+  let searchTimer: ReturnType<typeof setTimeout> | null = null
+  let searchSeq = 0 // guards against out-of-order async responses
 
   function render() {
     const s = getSettings()
@@ -67,10 +72,21 @@ export function mountPhoneUI(
           <p class="loc-status" id="loc-status"${status ? '' : ' hidden'}>${status}</p>
         </div>
         <div class="field"${isAuto ? ' hidden' : ''}>
-          <label class="label" for="city">City</label>
+          <label class="label" for="city">City preset</label>
           <select id="city">
             ${CITIES.map((c) => option(c.id, `${c.name} (${c.country})`, c.id === s.cityId)).join('')}
           </select>
+          <label class="label search-label" for="city-search">Search for a city</label>
+          <input id="city-search" type="search" placeholder="Type a city name…" autocomplete="off" />
+          <p class="loc-status" id="search-status"${searchStatus ? '' : ' hidden'}>${searchStatus}</p>
+          <div class="search-results" id="search-results">
+            ${searchResults
+              .map(
+                (r, i) =>
+                  `<button type="button" class="search-result" data-idx="${i}">${r.name}, ${r.country}</button>`,
+              )
+              .join('')}
+          </div>
         </div>
         <div class="field">
           <label class="label" for="method">Calculation method</label>
@@ -111,6 +127,35 @@ export function mountPhoneUI(
         })
     }
 
+    const searchInput = root.querySelector<HTMLInputElement>('#city-search')
+    if (searchInput) {
+      searchInput.oninput = () => {
+        const query = searchInput.value
+        if (searchTimer) clearTimeout(searchTimer)
+        searchTimer = setTimeout(() => void runSearch(query), 300)
+      }
+    }
+
+    root.querySelectorAll<HTMLButtonElement>('.search-result').forEach((btn) => {
+      btn.onclick = () => {
+        const idx = Number(btn.dataset.idx)
+        const r = searchResults[idx]
+        if (!r) return
+        searchStatus = ''
+        searchResults = []
+        onChange({
+          ...getSettings(),
+          locationMode: 'search',
+          searchLocation: {
+            latitude: r.latitude,
+            longitude: r.longitude,
+            timeZone: r.timeZone,
+            label: `${r.name}, ${r.country}`,
+          },
+        })
+      }
+    })
+
     root.querySelector<HTMLSelectElement>('#method')!.onchange = (e) =>
       onChange({ ...getSettings(), method: (e.target as HTMLSelectElement).value as MethodId })
 
@@ -131,6 +176,37 @@ export function mountPhoneUI(
       status = `Couldn't get location — using city. (${(err as Error).message})`
       onChange({ ...getSettings(), locationMode: 'city' })
     }
+  }
+
+  async function runSearch(query: string) {
+    const q = query.trim()
+    if (q.length < 2) {
+      searchResults = []
+      searchStatus = ''
+      render()
+      restoreSearchFocus(q)
+      return
+    }
+    const seq = ++searchSeq
+    searchStatus = 'Searching…'
+    render()
+    restoreSearchFocus(q)
+    const results = await searchCities(q)
+    if (seq !== searchSeq) return // a newer search superseded this one
+    searchResults = results
+    searchStatus = results.length ? '' : 'No matches found'
+    render()
+    restoreSearchFocus(q)
+  }
+
+  /** Re-rendering replaces the input node; restore its value + caret. */
+  function restoreSearchFocus(value: string) {
+    const input = root.querySelector<HTMLInputElement>('#city-search')
+    if (!input) return
+    input.value = value
+    input.focus()
+    const end = value.length
+    input.setSelectionRange(end, end)
   }
 
   render()
