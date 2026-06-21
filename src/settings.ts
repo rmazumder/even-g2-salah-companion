@@ -32,12 +32,13 @@ export interface AutoLocation {
   label: string
 }
 
-export type LocationMode = 'auto' | 'city'
+export type LocationMode = 'auto' | 'city' | 'search'
 
 export interface Settings {
   locationMode: LocationMode
   cityId: string
   autoLocation: AutoLocation | null
+  searchLocation: AutoLocation | null
   method: MethodId
   madhab: MadhabId
 }
@@ -72,6 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   locationMode: 'city',
   cityId: 'mecca',
   autoLocation: null,
+  searchLocation: null,
   method: 'MuslimWorldLeague',
   madhab: 'Hanafi',
 }
@@ -80,6 +82,10 @@ export const DEFAULT_SETTINGS: Settings = {
 export function resolveLocation(s: Settings): PrayerLocation {
   if (s.locationMode === 'auto' && s.autoLocation) {
     const a = s.autoLocation
+    return { name: a.label, latitude: a.latitude, longitude: a.longitude, timeZone: a.timeZone }
+  }
+  if (s.locationMode === 'search' && s.searchLocation) {
+    const a = s.searchLocation
     return { name: a.label, latitude: a.latitude, longitude: a.longitude, timeZone: a.timeZone }
   }
   const c = cityById(s.cityId)
@@ -141,9 +147,13 @@ export function sanitizeSettings(s: Partial<Settings> | null | undefined): Setti
   const method = METHODS.some((m) => m.id === s?.method) ? s!.method! : DEFAULT_SETTINGS.method
   const madhab = MADHABS.some((m) => m.id === s?.madhab) ? s!.madhab! : DEFAULT_SETTINGS.madhab
   const autoLocation = isValidAutoLocation(s?.autoLocation) ? s!.autoLocation! : null
-  const locationMode: LocationMode =
-    s?.locationMode === 'auto' && autoLocation ? 'auto' : 'city'
-  return { locationMode, cityId, autoLocation, method, madhab }
+  const searchLocation = isValidAutoLocation(s?.searchLocation) ? s!.searchLocation! : null
+
+  let locationMode: LocationMode = 'city'
+  if (s?.locationMode === 'auto' && autoLocation) locationMode = 'auto'
+  else if (s?.locationMode === 'search' && searchLocation) locationMode = 'search'
+
+  return { locationMode, cityId, autoLocation, searchLocation, method, madhab }
 }
 
 // ---- Settings menu catalog -------------------------------------------------
@@ -169,10 +179,11 @@ export const MENU_ITEMS: MenuItem[] = [
     options: CITIES.map((c) => ({ id: c.id, label: c.name })),
     get: (s) => s.cityId,
     set: (s, id) => ({ ...s, cityId: id, locationMode: 'city' }),
-    short: (s) =>
-      s.locationMode === 'auto' && s.autoLocation
-        ? s.autoLocation.label
-        : (CITIES.find((c) => c.id === s.cityId)?.name ?? s.cityId),
+    short: (s) => {
+      if (s.locationMode === 'auto' && s.autoLocation) return s.autoLocation.label
+      if (s.locationMode === 'search' && s.searchLocation) return s.searchLocation.label
+      return CITIES.find((c) => c.id === s.cityId)?.name ?? s.cityId
+    },
   },
   {
     key: 'method',

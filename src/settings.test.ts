@@ -97,6 +97,59 @@ describe('sanitizeSettings location handling', () => {
   })
 })
 
+describe('resolveLocation search mode', () => {
+  it('returns the search location when mode is search and present', () => {
+    const s: Settings = {
+      ...DEFAULT_SETTINGS,
+      locationMode: 'search',
+      searchLocation: { latitude: 5, longitude: 6, timeZone: 'Asia/Dhaka', label: 'Dhaka, BD' },
+    }
+    const loc = resolveLocation(s)
+    expect(loc.name).toBe('Dhaka, BD')
+    expect(loc.latitude).toBe(5)
+    expect(loc.timeZone).toBe('Asia/Dhaka')
+  })
+
+  it('falls back to city when mode is search but searchLocation is missing', () => {
+    const s: Settings = { ...DEFAULT_SETTINGS, locationMode: 'search', searchLocation: null, cityId: 'mecca' }
+    expect(resolveLocation(s).name).toBe('Mecca')
+  })
+})
+
+describe('sanitizeSettings search handling', () => {
+  it('defaults searchLocation to null', () => {
+    expect(DEFAULT_SETTINGS.searchLocation).toBeNull()
+    const s = sanitizeSettings({ cityId: 'dhaka', method: 'Karachi', madhab: 'Hanafi' } as never)
+    expect(s.searchLocation).toBeNull()
+  })
+
+  it('keeps a valid search location', () => {
+    const s = sanitizeSettings({
+      locationMode: 'search',
+      cityId: 'mecca',
+      autoLocation: null,
+      searchLocation: { latitude: 5, longitude: 6, timeZone: 'Asia/Dhaka', label: 'Dhaka, BD' },
+      method: 'MuslimWorldLeague',
+      madhab: 'Hanafi',
+    } as never)
+    expect(s.locationMode).toBe('search')
+    expect(s.searchLocation?.latitude).toBe(5)
+  })
+
+  it('downgrades to city when search coords are invalid', () => {
+    const s = sanitizeSettings({
+      locationMode: 'search',
+      cityId: 'mecca',
+      autoLocation: null,
+      searchLocation: { latitude: NaN, longitude: 6, timeZone: '', label: '' },
+      method: 'MuslimWorldLeague',
+      madhab: 'Hanafi',
+    } as never)
+    expect(s.locationMode).toBe('city')
+    expect(s.searchLocation).toBeNull()
+  })
+})
+
 describe('MENU_ITEMS', () => {
   it('get/set round-trips for every setting', () => {
     for (const item of MENU_ITEMS) {
