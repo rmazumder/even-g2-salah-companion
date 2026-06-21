@@ -1,16 +1,30 @@
-# Salah — Even Realities G2 plugin
+# Salah Companion — Even Realities G2 plugin
 
-Shows today's five prayer (salah) times for a city you pick on the glasses, with
-the next prayer highlighted and a live countdown. Prayer times are computed
-**fully offline** on-device — no network, no location hardware, no microphone.
+Shows today's five prayer (salah) times **on the glasses HUD**, with the next
+prayer highlighted and a live countdown. The paired phone companion app is for
+**settings only** — it never shows the times themselves.
 
-- **Configurable** on-glasses: city, calculation method (12 options), and Asr madhab
+Pick your location three ways:
+
+- **Use my location** — auto-detect via the phone's GPS (browser geolocation).
+- **Search for a city** — type any city name; looked up online via the
+  Open-Meteo geocoding API (returns coordinates + timezone).
+- **On-glasses presets** — a built-in city list selectable from the glasses
+  settings menu (works with no phone and no network).
+
+Prayer times are computed on-device by [`adhan`](https://github.com/batoulapps/adhan-js);
+only location detection / city search use GPS / network. Settings persist across
+restarts via Even Hub storage.
+
+- **Configurable:** location, calculation method (12 options), and Asr madhab
 - **Defaults:** Mecca · Muslim World League · Hanafi
-- **Display:** a single Even Hub text container, updated flicker-free
+- **Glasses display:** a single Even Hub text container, updated flicker-free
 
-See the design spec: `../docs/superpowers/specs/2026-06-18-even-namaz-design.md`
+Design specs: `../docs/superpowers/specs/2026-06-18-even-namaz-design.md`,
+`2026-06-20-even-namaz-auto-location-design.md`,
+`2026-06-20-even-namaz-city-search-design.md`.
 
-## How it looks
+## Glasses HUD
 
 ```
  Fajr      01:02
@@ -20,9 +34,10 @@ See the design spec: `../docs/superpowers/specs/2026-06-18-even-namaz-design.md`
  Isha      01:02
 
  London · MWL · Hanafi
+ tap for settings
 ```
 
-Settings menu (single press from the main view):
+On-glasses settings menu (single press from the main view):
 
 ```
  Settings
@@ -34,7 +49,18 @@ Settings menu (single press from the main view):
  tap open · 2x back
 ```
 
-## Controls
+The on-glasses City picker selects from the built-in presets (you can't type on
+the touchpad). Auto-location and city search live in the phone companion.
+
+## Companion app (phone)
+
+Settings only — **no prayer times shown here** (those are on the glasses):
+
+- **Location** toggle: *Use my location* (GPS) or *Choose a city*.
+- **Search for a city** — debounced online lookup; tap a result to select it.
+- **Calculation method** and **Asr madhab** selectors.
+
+## Controls (glasses)
 
 | View        | Gesture       | Action                                  |
 | ----------- | ------------- | --------------------------------------- |
@@ -53,23 +79,37 @@ Works on the G2 temple touchpad or the optional R1 ring (same gestures).
 
 ```
 src/
-  cities.ts        seed city list (coords + IANA timezone) — add more here
-  settings.ts      Settings type, method/madhab catalogs, adhan params, menu table
-  prayer.ts        pure: computeSchedule(city, now, settings) — next prayer, rollover
-  format.ts        pure: time/countdown formatting + main/menu/picker view strings
+  cities.ts        built-in preset city list (coords + IANA timezone)
+  settings.ts      Settings type (location mode, method, madhab), adhan params,
+                   resolveLocation, sanitize, on-glasses menu table
+  location.ts      pure: browser-geolocation wrapper (injectable, tested)
+  geocode.ts       pure: Open-Meteo city search (injectable fetch, tested)
+  prayer.ts        pure: computeSchedule(location, now, settings)
+  format.ts        pure: time/countdown formatting + glasses view strings
   state.ts         pure: gesture → state reducer (main → menu → picker)
+  phone.ts         phone companion settings UI (DOM view layer, no SDK)
+  phone.css        companion styling
   main.ts          SDK glue (the only file that touches the Even Hub bridge)
 app.json           Even Hub manifest
 public/icon.png    24×24 greyscale app icon
 ```
 
-All logic is pure and unit-tested in Node; the SDK is isolated to `main.ts`.
+All logic is pure and unit-tested in Node; the SDK is isolated to `main.ts`, and
+the phone view (`phone.ts`) uses only browser APIs (`fetch`, `navigator`).
+
+## Permissions (`app.json`)
+
+- `location` — detect the current location for accurate prayer times.
+- `network` — city search, whitelisted to `https://geocoding-api.open-meteo.com`.
+
+Without these granted on-device, auto-location and search are unavailable; the
+on-glasses presets still work offline.
 
 ## Calculation methods
 
 Muslim World League, ISNA (N. America), Umm al-Qura, Egyptian, Karachi, Dubai,
 Qatar, Kuwait, Singapore, Turkey, Tehran, Moonsighting. Asr madhab: Standard
-(Shafi) or Hanafi. All computed offline by `adhan`.
+(Shafi) or Hanafi. All computed on-device by `adhan`.
 
 ## Develop
 
@@ -94,12 +134,20 @@ npm run qr
 ```bash
 npm run build                 # tsc && vite build  → dist/
 npm run pack                  # → salah.ehpk
-# then upload salah.ehpk via the dev portal at hub.evenrealities.com
 ```
+
+Then install `salah.ehpk` via the Even Realities app or upload it to the dev
+portal at hub.evenrealities.com.
+
+> **Updating an existing install:** the app is identified by `package_id`
+> (`com.ruhul.salahcompanion`). A direct `.ehpk` import won't overwrite an app
+> already installed under the same `package_id` — bump `version` in `app.json`
+> and uninstall the old build first, or publish via the dev portal (which
+> handles version updates).
 
 ## Extending
 
-- **Add a city:** append to `CITIES` in `src/cities.ts` (needs `latitude`,
-  `longitude`, IANA `timeZone`).
+- **Add a preset city:** append to `CITIES` in `src/cities.ts` (needs
+  `latitude`, `longitude`, IANA `timeZone`).
 - **Add a setting:** add an entry to `MENU_ITEMS` in `src/settings.ts` — the
-  menu, picker, and persistence pick it up automatically.
+  on-glasses menu, picker, and persistence pick it up automatically.
