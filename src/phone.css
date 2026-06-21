@@ -1,0 +1,152 @@
+/* Phone-side UI styled to the Even Hub design system (design-guidelines skill).
+   Tokens: light + dark. Brand yellow #FEF991 only as accent; never glasses green. */
+:root {
+  --color-text: #232323;
+  --color-text-dim: #7b7b7b;
+  --color-bg: #ffffff;
+  --color-surface: #eeeeee;
+  --color-input-bg: rgba(35, 35, 35, 0.08);
+  --color-accent: #fef991;
+  --color-text-on-accent: #232323;
+  --color-hairline: rgba(35, 35, 35, 0.1);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text: #ffffff;
+    --color-text-dim: #8a8a8a;
+    --color-bg: #111111;
+    --color-surface: #1a1a1a;
+    --color-input-bg: rgba(255, 255, 255, 0.08);
+    --color-hairline: rgba(255, 255, 255, 0.1);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: 'FK Grotesk Neue', system-ui, -apple-system, 'Source Han Sans', sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+#app {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 8px 0 0;
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--color-text-dim);
+  margin: 2px 0 24px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+/* Prayer preview rows */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 2px;
+}
+.row + .row {
+  border-top: 1px solid var(--color-hairline);
+}
+.prayer-name {
+  font-size: 16px;
+}
+.prayer-time {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-dim);
+}
+.row.next .prayer-name,
+.row.next .prayer-time {
+  font-weight: 700;
+  color: var(--color-text);
+}
+.next-badge {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin-left: 8px;
+}
+
+/* Form fields */
+.field {
+  margin-bottom: 16px;
+}
+.field:last-child {
+  margin-bottom: 0;
+}
+.label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin: 0 0 8px;
+}
+select {
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.segment {
+  display: flex;
+  gap: 8px;
+}
+.segment button {
+  flex: 1;
+  font: inherit;
+  font-size: 16px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.segment button.active {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-weight: 600;
+}
+
+/* Location detection status */
+.loc-status {
+  font-size: 13px;
+  color: var(--color-text-dim);
+  margin: 8px 0 0;
+}
