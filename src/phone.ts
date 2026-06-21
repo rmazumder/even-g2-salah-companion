@@ -1,13 +1,12 @@
 /**
  * Phone-side settings UI — the HTML the Even companion app shows on the phone.
- * Location (auto-detect via browser geolocation, or pick a city), calculation
- * method, and Asr madhab, with a live preview of today's times. Pure view
- * layer (no SDK): on change it calls `onChange` with new Settings.
+ * Location (auto-detect via browser geolocation, or search for a city),
+ * calculation method, and Asr madhab. Prayer times themselves are shown only on
+ * the glasses HUD, not here. Pure view layer (no SDK): on change it calls
+ * `onChange` with new Settings.
  */
-import { CITIES } from './cities'
 import { detectLocation, deviceTimeZone } from './location'
 import { searchCities, type GeocodeResult } from './geocode'
-import { buildPreview } from './prayer'
 import {
   MADHABS,
   METHODS,
@@ -42,24 +41,11 @@ export function mountPhoneUI(
   function render() {
     const s = getSettings()
     const location = resolveLocation(s)
-    const preview = buildPreview(location, new Date(), s)
     const isAuto = s.locationMode === 'auto'
-
-    const previewRows = preview
-      .map(
-        (p) => `
-        <div class="row${p.isNext ? ' next' : ''}">
-          <span class="prayer-name">${p.name}${p.isNext ? '<span class="next-badge">next</span>' : ''}</span>
-          <span class="prayer-time">${p.time}</span>
-        </div>`,
-      )
-      .join('')
 
     root.innerHTML = `
       <h1 class="title">Salah Companion</h1>
-      <p class="subtitle">Prayer times · ${location.name}</p>
-
-      <div class="card" id="preview">${previewRows}</div>
+      <p class="subtitle">Prayer times show on your glasses · ${location.name}</p>
 
       <h2 class="section-title">Settings</h2>
       <div class="card">
@@ -72,11 +58,7 @@ export function mountPhoneUI(
           <p class="loc-status" id="loc-status"${status ? '' : ' hidden'}>${status}</p>
         </div>
         <div class="field"${isAuto ? ' hidden' : ''}>
-          <label class="label" for="city">City preset</label>
-          <select id="city">
-            ${CITIES.map((c) => option(c.id, `${c.name} (${c.country})`, c.id === s.cityId)).join('')}
-          </select>
-          <label class="label search-label" for="city-search">Search for a city</label>
+          <label class="label" for="city-search">Search for a city</label>
           <input id="city-search" type="search" placeholder="Type a city name…" autocomplete="off" />
           <p class="loc-status" id="search-status"${searchStatus ? '' : ' hidden'}>${searchStatus}</p>
           <div class="search-results" id="search-results">
@@ -116,16 +98,6 @@ export function mountPhoneUI(
         }
       }
     })
-
-    const citySelect = root.querySelector<HTMLSelectElement>('#city')
-    if (citySelect) {
-      citySelect.onchange = (e) =>
-        onChange({
-          ...getSettings(),
-          locationMode: 'city',
-          cityId: (e.target as HTMLSelectElement).value,
-        })
-    }
 
     const searchInput = root.querySelector<HTMLInputElement>('#city-search')
     if (searchInput) {
