@@ -2,10 +2,20 @@
   "package_id": "com.ruhul.salah",
   "edition": "202601",
   "name": "Salah Companion",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.7",
   "entrypoint": "index.html",
-  "permissions": [],
+  "permissions": [
+    {
+      "name": "location",
+      "desc": "Detect your current location to calculate accurate prayer times."
+    },
+    {
+      "name": "network",
+      "desc": "Search for any city by name to set your prayer-time location.",
+      "whitelist": ["https://geocoding-api.open-meteo.com"]
+    }
+  ],
   "supported_languages": ["en"]
 }
