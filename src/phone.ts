@@ -51,7 +51,7 @@ export function mountPhoneUI(
       .join('')
 
     root.innerHTML = `
-      <h1 class="title">Salah</h1>
+      <h1 class="title">Salah Companion</h1>
       <p class="subtitle">Prayer times · ${location.name}</p>
 
       <div class="card" id="preview">${previewRows}</div>
