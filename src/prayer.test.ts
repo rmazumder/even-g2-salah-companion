@@ -7,7 +7,7 @@ const london = cityById('london')
 const dhaka = cityById('dhaka')
 
 // MWL + Hanafi — the convention the canonical values below were generated with.
-const mwlHanafi: Settings = { cityId: 'london', method: 'MuslimWorldLeague', madhab: 'Hanafi' }
+const mwlHanafi: Settings = { ...DEFAULT_SETTINGS, cityId: 'london', method: 'MuslimWorldLeague', madhab: 'Hanafi' }
 
 /** Format an instant in a timezone as HH:mm for assertions. */
 function hhmm(instant: Date, tz: string): string {
@@ -62,8 +62,8 @@ describe('computeSchedule', () => {
 
   it('different methods yield different Isha (method actually applied)', () => {
     const now = new Date('2026-06-18T10:00:00Z')
-    const mwl = computeSchedule(dhaka, now, { cityId: 'dhaka', method: 'MuslimWorldLeague', madhab: 'Hanafi' })
-    const karachi = computeSchedule(dhaka, now, { cityId: 'dhaka', method: 'Karachi', madhab: 'Hanafi' })
+    const mwl = computeSchedule(dhaka, now, { ...DEFAULT_SETTINGS, cityId: 'dhaka', method: 'MuslimWorldLeague', madhab: 'Hanafi' })
+    const karachi = computeSchedule(dhaka, now, { ...DEFAULT_SETTINGS, cityId: 'dhaka', method: 'Karachi', madhab: 'Hanafi' })
     const ishaMwl = mwl.entries.find((e) => e.name === 'Isha')!.time.getTime()
     const ishaKar = karachi.entries.find((e) => e.name === 'Isha')!.time.getTime()
     expect(ishaMwl).not.toEqual(ishaKar)
