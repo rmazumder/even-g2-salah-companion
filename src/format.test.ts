@@ -5,6 +5,8 @@ import {
   buildMenuView,
   buildPickerView,
   formatCountdown,
+  formatGregorianDate,
+  formatHijriDate,
   formatTime,
 } from './format'
 import { computeSchedule } from './prayer'
@@ -30,15 +32,36 @@ describe('formatCountdown', () => {
   it('floors negatives at 0', () => expect(formatCountdown(-1000)).toBe('0m'))
 })
 
+describe('formatGregorianDate', () => {
+  it('renders "Wkd D Mon" in the given timezone', () => {
+    expect(formatGregorianDate(new Date('2026-06-21T09:00:00Z'), 'Asia/Riyadh')).toMatch(
+      /^[A-Za-z]{3} 21 Jun$/,
+    )
+  })
+})
+
+describe('formatHijriDate', () => {
+  it('renders a Hijri date ending in AH', () => {
+    const out = formatHijriDate(new Date('2026-06-21T09:00:00Z'), 'Asia/Riyadh')
+    expect(out).toMatch(/^\d{1,2} .+ \d{3,4} AH$/)
+  })
+  it('is deterministic for the same instant + zone', () => {
+    const inst = new Date('2026-03-01T12:00:00Z')
+    expect(formatHijriDate(inst, 'Asia/Dhaka')).toBe(formatHijriDate(inst, 'Asia/Dhaka'))
+  })
+})
+
 describe('buildMainView', () => {
-  it('renders five aligned rows, marks the next prayer, and a settings-driven footer', () => {
+  it('renders a dated header, hijri date, rule, five rows, marks next, and footer', () => {
     const s = computeSchedule(london, new Date('2026-06-18T15:00:00Z'), settings)
     const lines = buildMainView(s, settings).split('\n')
-    expect(lines).toHaveLength(8) // 5 prayers + blank + footer + hint
-    expect(lines[0]).toBe(' Fajr      01:02')
-    expect(lines[2]).toMatch(/^▶Asr {7}18:39 {4}in /)
-    expect(lines[6]).toBe(' London · MWL · Hanafi')
-    expect(lines[7]).toBe(' tap for settings')
+    expect(lines).toHaveLength(10) // header + hijri + rule + 5 prayers + blank + footer
+    expect(lines[0]).toMatch(/^ London · [A-Za-z]{3} \d{1,2} \w{3}$/)
+    expect(lines[1]).toMatch(/ AH$/)
+    expect(lines[2]).toMatch(/^─+$/)
+    expect(lines[3]).toBe(' Fajr      01:02')
+    expect(lines.find((l) => l.startsWith('▶'))).toMatch(/^▶Asr {7}18:39 {4}in /)
+    expect(lines[9]).toBe(' MWL · Hanafi · tap for settings')
     expect(lines.filter((l) => l.startsWith('▶'))).toHaveLength(1)
   })
 
@@ -46,7 +69,7 @@ describe('buildMainView', () => {
     const alt: Settings = { ...DEFAULT_SETTINGS, cityId: 'london', method: 'Karachi', madhab: 'Shafi' }
     const s = computeSchedule(london, new Date('2026-06-18T15:00:00Z'), alt)
     const lines = buildMainView(s, alt).split('\n')
-    expect(lines[6]).toBe(' London · Krch · Shafi')
+    expect(lines[lines.length - 1]).toBe(' Krch · Shafi · tap for settings')
   })
 })
 

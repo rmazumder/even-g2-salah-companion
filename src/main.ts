@@ -76,9 +76,9 @@ async function main() {
           yPosition: 0,
           width: 576,
           height: 288,
-          borderWidth: 0,
-          borderColor: 5,
-          paddingLength: 4,
+          borderWidth: 2, // full-screen rectangle frame around the content
+          borderColor: 10,
+          paddingLength: 10,
           containerID: CONTAINER_ID,
           containerName: CONTAINER_NAME,
           content: renderContent(state),

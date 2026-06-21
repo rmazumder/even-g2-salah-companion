@@ -28,8 +28,39 @@ export function formatCountdown(ms: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
-/** The main prayer-list view (all five prayers, next one marked + countdown). */
+/** Today's Gregorian date in the given timezone, e.g. "Sun 21 Jun". */
+export function formatGregorianDate(instant: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).formatToParts(instant)
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  return `${get('weekday')} ${get('day')} ${get('month')}`
+}
+
+/** Today's Hijri (Umm al-Qura) date, e.g. "23 Ramadan 1447 AH". */
+export function formatHijriDate(instant: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {
+    timeZone,
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).formatToParts(instant)
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  return `${get('day')} ${get('month')} ${get('year')} AH`
+}
+
+/** Horizontal divider sized to span one line without wrapping in the firmware font. */
+const RULE = '─'.repeat(22)
+
+/** The main prayer-list view: dated header, the five prayers (next marked), footer. */
 export function buildMainView(s: Schedule, settings: Settings): string {
+  const today = s.entries[0]?.time ?? s.nextTime
+  const header = ` ${s.location.name} · ${formatGregorianDate(today, s.location.timeZone)}`
+  const hijri = ` ${formatHijriDate(today, s.location.timeZone)}`
+
   const rows = s.entries.map((e) => {
     const marker = e.name === s.nextName ? '▶' : ' '
     let row = marker + e.name.padEnd(NAME_COLUMN) + formatTime(e.time, s.location.timeZone)
@@ -38,8 +69,9 @@ export function buildMainView(s: Schedule, settings: Settings): string {
     }
     return row
   })
-  const footer = ` ${s.location.name} · ${methodShort(settings.method)} · ${madhabShort(settings.madhab)}`
-  return [...rows, '', footer, ' tap for settings'].join('\n')
+
+  const footer = ` ${methodShort(settings.method)} · ${madhabShort(settings.madhab)} · tap for settings`
+  return [header, hijri, RULE, ...rows, '', footer].join('\n')
 }
 
 /** The settings menu — each row shows the setting and its current value. */
