@@ -1,8 +1,9 @@
 # Salah Companion — Even Realities G2 plugin
 
 Shows today's five prayer (salah) times **on the glasses HUD**, with the next
-prayer highlighted and a live countdown. The paired phone companion app is for
-**settings only** — it never shows the times themselves.
+prayer highlighted, a live countdown, and today's Hijri date — all inside a
+full-screen framed view. The paired phone companion app is for **settings only**;
+it never shows the times themselves.
 
 Pick your location three ways:
 
@@ -16,25 +17,27 @@ Prayer times are computed on-device by [`adhan`](https://github.com/batoulapps/a
 only location detection / city search use GPS / network. Settings persist across
 restarts via Even Hub storage.
 
-- **Configurable:** location, calculation method (12 options), and Asr madhab
-- **Defaults:** Mecca · Muslim World League · Hanafi
-- **Glasses display:** a single Even Hub text container, updated flicker-free
-
-Design specs: `../docs/superpowers/specs/2026-06-18-even-namaz-design.md`,
-`2026-06-20-even-namaz-auto-location-design.md`,
-`2026-06-20-even-namaz-city-search-design.md`.
+- **Configurable:** location, calculation method (12 options), Asr madhab, and an
+  idle **auto-close** timer for the glasses view
+- **Defaults:** Mecca · Muslim World League · Hanafi · auto-close 5s
+- **Glasses display:** a single full-screen, framed Even Hub text container,
+  updated flicker-free
 
 ## Glasses HUD
 
-```
- Fajr      01:02
- Dhuhr     13:03
-▶Asr       18:39    in 2h 39m
- Maghrib   21:21
- Isha      01:02
+A full-screen view enclosed by a rectangle frame:
 
- London · MWL · Hanafi
- tap for settings
+```
+ Mecca · Sun 21 Jun
+ 6 Muharram 1448 AH
+──────────────────────
+ Fajr       04:14
+▶Dhuhr      12:23   in 2h 22m
+ Asr        17:02
+ Maghrib    19:06
+ Isha       20:26
+
+ MWL · Hanafi · tap for settings
 ```
 
 On-glasses settings menu (single press from the main view):
@@ -50,7 +53,8 @@ On-glasses settings menu (single press from the main view):
 ```
 
 The on-glasses City picker selects from the built-in presets (you can't type on
-the touchpad). Auto-location and city search live in the phone companion.
+the touchpad). Auto-location, city search, and the auto-close timer live in the
+phone companion.
 
 ## Companion app (phone)
 
@@ -59,6 +63,8 @@ Settings only — **no prayer times shown here** (those are on the glasses):
 - **Location** toggle: *Use my location* (GPS) or *Choose a city*.
 - **Search for a city** — debounced online lookup; tap a result to select it.
 - **Calculation method** and **Asr madhab** selectors.
+- **Auto-close on glasses** — Off · 5s · 10s · 30s · 1 min · 5 min. The glasses
+  view dismisses after this much inactivity; any tap/swipe resets the timer.
 
 ## Controls (glasses)
 
@@ -73,25 +79,27 @@ Settings only — **no prayer times shown here** (those are on the glasses):
 | Picker      | single press  | select (saved for next time) → settings |
 | Picker      | double press  | cancel → settings                       |
 
-Works on the G2 temple touchpad or the optional R1 ring (same gestures).
+Works on the G2 temple touchpad or the optional R1 ring (same gestures). The app
+also auto-closes after the configured idle period.
 
 ## Project layout
 
 ```
 src/
   cities.ts        built-in preset city list (coords + IANA timezone)
-  settings.ts      Settings type (location mode, method, madhab), adhan params,
-                   resolveLocation, sanitize, on-glasses menu table
+  settings.ts      Settings type (location mode, method, madhab, auto-close),
+                   adhan params, resolveLocation, sanitize, on-glasses menu table
   location.ts      pure: browser-geolocation wrapper (injectable, tested)
   geocode.ts       pure: Open-Meteo city search (injectable fetch, tested)
   prayer.ts        pure: computeSchedule(location, now, settings)
-  format.ts        pure: time/countdown formatting + glasses view strings
+  format.ts        pure: time/countdown/date formatting + glasses view strings
   state.ts         pure: gesture → state reducer (main → menu → picker)
   phone.ts         phone companion settings UI (DOM view layer, no SDK)
   phone.css        companion styling
   main.ts          SDK glue (the only file that touches the Even Hub bridge)
 app.json           Even Hub manifest
-public/icon.png    24×24 greyscale app icon
+public/icon.png    24×24 greyscale mosque app icon
+publish/           store assets: cover, screenshots, STORE_LISTING.md
 ```
 
 All logic is pure and unit-tested in Node; the SDK is isolated to `main.ts`, and
@@ -137,7 +145,8 @@ npm run pack                  # → salah.ehpk
 ```
 
 Then install `salah.ehpk` via the Even Realities app or upload it to the dev
-portal at hub.evenrealities.com.
+portal at hub.evenrealities.com. Store assets (cover, screenshots, listing copy)
+live in [`publish/`](publish/).
 
 > **Updating an existing install:** the app is identified by `package_id`
 > (`com.ruhul.salahcompanion`). A direct `.ehpk` import won't overwrite an app
