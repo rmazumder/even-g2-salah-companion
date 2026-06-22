@@ -19,7 +19,7 @@ import { FOREGROUND_ENTER, gestureFromEvent, lifecycleFromEvent } from './input'
 import { mountPhoneUI, type PhoneUI } from './phone'
 import './phone.css'
 import { computeSchedule } from './prayer'
-import { DEFAULT_SETTINGS, menuItemByKey, resolveLocation, sanitizeSettings, type Settings } from './settings'
+import { DEFAULT_SETTINGS, autoCloseMs, menuItemByKey, resolveLocation, sanitizeSettings, type Settings } from './settings'
 import { reduce, type AppState } from './state'
 
 const CONTAINER_ID = 1
@@ -112,9 +112,27 @@ async function main() {
   }
 
   // Live countdown + day rollover (only the main view changes over time).
-  setInterval(() => {
+  const tick = setInterval(() => {
     if (state.mode === 'main') void paint()
   }, TICK_MS)
+
+  // Auto-close after a configurable idle period; any activity re-arms it.
+  // The repaint tick above is NOT activity, so the app still dismisses while idle.
+  let autoCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+  /** Tear down timers and close the app. exitMode 0 = direct, 1 = confirm dialog. */
+  function closeApp(exitMode: number) {
+    clearInterval(tick)
+    if (autoCloseTimer) clearTimeout(autoCloseTimer)
+    void bridge.shutDownPageContainer(exitMode)
+  }
+
+  function armAutoClose() {
+    if (autoCloseTimer) clearTimeout(autoCloseTimer)
+    const ms = autoCloseMs(state.settings)
+    if (ms === null) return // Off
+    autoCloseTimer = setTimeout(() => closeApp(0), ms) // 0 = direct close, no dialog
+  }
 
   // Single source of truth: any settings change (from phone UI or glasses)
   // persists once and refreshes both surfaces.
@@ -124,6 +142,7 @@ async function main() {
     void bridge.setLocalStorage(STORAGE_KEY, JSON.stringify(next))
     void paint() // glasses
     phoneUI?.refresh() // phone DOM
+    armAutoClose() // re-arm with the (possibly new) duration
   }
 
   // Phone-side settings page (the HTML the Even app shows on the phone).
@@ -132,7 +151,11 @@ async function main() {
     phoneUI = mountPhoneUI(appRoot, () => state.settings, applySettings, () => country)
   }
 
+  armAutoClose() // start the idle timer once the page is up
+
   bridge.onEvenHubEvent((event) => {
+    armAutoClose() // any incoming event counts as activity → reset the idle timer
+
     // Lifecycle: refresh on resume; nothing to clean up otherwise (no hardware
     // in use, and settings are persisted on every change).
     if (lifecycleFromEvent(event) === FOREGROUND_ENTER) {
@@ -152,7 +175,7 @@ async function main() {
       return
     }
     if (effect?.type === 'exit') {
-      void bridge.shutDownPageContainer(1) // mode 1 = required confirm dialog on root
+      closeApp(1) // mode 1 = required confirm dialog on root
       return
     }
 

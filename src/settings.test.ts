@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  autoCloseMs,
   calcParamsFor,
   DEFAULT_SETTINGS,
   MENU_ITEMS,
@@ -8,6 +9,25 @@ import {
   sanitizeSettings,
   type Settings,
 } from './settings'
+
+describe('autoCloseSeconds', () => {
+  it('defaults to 5 seconds', () => {
+    expect(DEFAULT_SETTINGS.autoCloseSeconds).toBe(5)
+  })
+
+  it('sanitize keeps a valid preset and defaults an invalid one', () => {
+    expect(sanitizeSettings({ ...DEFAULT_SETTINGS, autoCloseSeconds: 30 } as never).autoCloseSeconds).toBe(30)
+    expect(sanitizeSettings({ ...DEFAULT_SETTINGS, autoCloseSeconds: 0 } as never).autoCloseSeconds).toBe(0)
+    expect(sanitizeSettings({ ...DEFAULT_SETTINGS, autoCloseSeconds: 7 } as never).autoCloseSeconds).toBe(5)
+    expect(sanitizeSettings({ ...DEFAULT_SETTINGS, autoCloseSeconds: NaN } as never).autoCloseSeconds).toBe(5)
+  })
+
+  it('autoCloseMs returns null when off, else seconds*1000', () => {
+    expect(autoCloseMs({ ...DEFAULT_SETTINGS, autoCloseSeconds: 0 })).toBeNull()
+    expect(autoCloseMs({ ...DEFAULT_SETTINGS, autoCloseSeconds: 5 })).toBe(5000)
+    expect(autoCloseMs({ ...DEFAULT_SETTINGS, autoCloseSeconds: 300 })).toBe(300000)
+  })
+})
 
 describe('calcParamsFor', () => {
   it('maps madhab to adhan correctly', () => {

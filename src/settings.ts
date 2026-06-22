@@ -41,6 +41,8 @@ export interface Settings {
   searchLocation: AutoLocation | null
   method: MethodId
   madhab: MadhabId
+  /** Auto-close the glasses app after this many idle seconds. 0 = off. */
+  autoCloseSeconds: number
 }
 
 export interface Option {
@@ -69,6 +71,16 @@ export const MADHABS: { id: MadhabId; label: string; short: string }[] = [
   { id: 'Hanafi', label: 'Hanafi', short: 'Hanafi' },
 ]
 
+/** Idle-timeout presets for auto-closing the glasses app. value is in seconds. */
+export const AUTO_CLOSE_OPTIONS: { value: number; label: string }[] = [
+  { value: 0, label: 'Off' },
+  { value: 5, label: '5 seconds' },
+  { value: 10, label: '10 seconds' },
+  { value: 30, label: '30 seconds' },
+  { value: 60, label: '1 minute' },
+  { value: 300, label: '5 minutes' },
+]
+
 export const DEFAULT_SETTINGS: Settings = {
   locationMode: 'city',
   cityId: 'mecca',
@@ -76,6 +88,12 @@ export const DEFAULT_SETTINGS: Settings = {
   searchLocation: null,
   method: 'MuslimWorldLeague',
   madhab: 'Hanafi',
+  autoCloseSeconds: 5,
+}
+
+/** Idle timeout in milliseconds, or null when auto-close is off. */
+export function autoCloseMs(s: Settings): number | null {
+  return s.autoCloseSeconds > 0 ? s.autoCloseSeconds * 1000 : null
 }
 
 /** Resolve the effective prayer location from settings. */
@@ -153,7 +171,11 @@ export function sanitizeSettings(s: Partial<Settings> | null | undefined): Setti
   if (s?.locationMode === 'auto' && autoLocation) locationMode = 'auto'
   else if (s?.locationMode === 'search' && searchLocation) locationMode = 'search'
 
-  return { locationMode, cityId, autoLocation, searchLocation, method, madhab }
+  const autoCloseSeconds = AUTO_CLOSE_OPTIONS.some((o) => o.value === s?.autoCloseSeconds)
+    ? s!.autoCloseSeconds!
+    : DEFAULT_SETTINGS.autoCloseSeconds
+
+  return { locationMode, cityId, autoLocation, searchLocation, method, madhab, autoCloseSeconds }
 }
 
 // ---- Settings menu catalog -------------------------------------------------

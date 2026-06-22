@@ -8,6 +8,7 @@
 import { detectLocation, deviceTimeZone } from './location'
 import { searchCities, type GeocodeResult } from './geocode'
 import {
+  AUTO_CLOSE_OPTIONS,
   MADHABS,
   METHODS,
   resolveLocation,
@@ -85,6 +86,14 @@ export function mountPhoneUI(
             ).join('')}
           </div>
         </div>
+        <div class="field">
+          <label class="label" for="autoclose">Auto-close on glasses</label>
+          <select id="autoclose">
+            ${AUTO_CLOSE_OPTIONS.map((o) =>
+              option(String(o.value), o.label, o.value === s.autoCloseSeconds),
+            ).join('')}
+          </select>
+        </div>
       </div>`
 
     root.querySelectorAll<HTMLButtonElement>('#locmode button').forEach((btn) => {
@@ -134,6 +143,9 @@ export function mountPhoneUI(
     root.querySelectorAll<HTMLButtonElement>('#madhab button').forEach((btn) => {
       btn.onclick = () => onChange({ ...getSettings(), madhab: btn.dataset.id as MadhabId })
     })
+
+    root.querySelector<HTMLSelectElement>('#autoclose')!.onchange = (e) =>
+      onChange({ ...getSettings(), autoCloseSeconds: Number((e.target as HTMLSelectElement).value) })
   }
 
   async function useMyLocation() {
