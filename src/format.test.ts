@@ -7,6 +7,7 @@ import {
   formatCountdown,
   formatGregorianDate,
   formatHijriDate,
+  formatHijriShort,
   formatTime,
 } from './format'
 import { computeSchedule } from './prayer'
@@ -51,25 +52,33 @@ describe('formatHijriDate', () => {
   })
 })
 
+describe('formatHijriShort', () => {
+  it('renders "D MonthName" without year or AH', () => {
+    expect(formatHijriShort(new Date('2026-06-21T09:00:00Z'), 'Asia/Riyadh')).toMatch(
+      /^\d{1,2} \w+$/,
+    )
+  })
+})
+
 describe('buildMainView', () => {
-  it('renders a dated header, hijri date, rule, five rows, marks next, and footer', () => {
+  it('renders a consolidated header, top rule, five rows, bottom rule, footer', () => {
     const s = computeSchedule(london, new Date('2026-06-18T15:00:00Z'), settings)
     const lines = buildMainView(s, settings).split('\n')
-    expect(lines).toHaveLength(10) // header + hijri + rule + 5 prayers + blank + footer
-    expect(lines[0]).toMatch(/^ London · [A-Za-z]{3} \d{1,2} \w{3}$/)
-    expect(lines[1]).toMatch(/ AH$/)
-    expect(lines[2]).toMatch(/^─+$/)
-    expect(lines[3]).toBe(' Fajr      01:02')
-    expect(lines.find((l) => l.startsWith('▶'))).toMatch(/^▶Asr {7}18:39 {4}in /)
-    expect(lines[9]).toBe(' MWL · Hanafi · tap for settings')
-    expect(lines.filter((l) => l.startsWith('▶'))).toHaveLength(1)
+    expect(lines).toHaveLength(9) // header + top rule + 5 prayers + bottom rule + footer
+    expect(lines[0]).toMatch(/^ London · [A-Za-z]{3} \d{1,2} \w{3} · \d{1,2} \w+$/)
+    expect(lines[1]).toMatch(/^─+$/)
+    expect(lines[2]).toBe('    Fajr      01:02')
+    expect(lines.find((l) => l.startsWith('  ▶ '))).toMatch(/^  ▶ Asr {7}18:39 {4}in /)
+    expect(lines[7]).toMatch(/^─+$/)
+    expect(lines[8]).toMatch(/^ MWL · Hanafi {2,}tap ▷$/)
+    expect(lines.filter((l) => l.startsWith('  ▶ '))).toHaveLength(1)
   })
 
   it('reflects a different method/madhab in the footer', () => {
     const alt: Settings = { ...DEFAULT_SETTINGS, cityId: 'london', method: 'Karachi', madhab: 'Shafi' }
     const s = computeSchedule(london, new Date('2026-06-18T15:00:00Z'), alt)
     const lines = buildMainView(s, alt).split('\n')
-    expect(lines[lines.length - 1]).toBe(' Krch · Shafi · tap for settings')
+    expect(lines[lines.length - 1]).toMatch(/^ Krch · Shafi {2,}tap ▷$/)
   })
 })
 
@@ -77,26 +86,30 @@ describe('buildMenuView', () => {
   it('lists settings with current values and marks the highlighted row', () => {
     const lines = buildMenuView(settings, 1).split('\n')
     expect(lines[0]).toBe(' Settings')
-    expect(lines).toContain(' City      London')
-    expect(lines).toContain('▶Method    MWL')
-    expect(lines).toContain(' Asr       Hanafi')
-    expect(lines.filter((l) => l.startsWith('▶'))).toHaveLength(1)
+    expect(lines[1]).toMatch(/^─+$/)
+    expect(lines).toContain('    City      London')
+    expect(lines).toContain('  ▶ Method    MWL')
+    expect(lines).toContain('    Asr       Hanafi')
+    expect(lines.filter((l) => l.startsWith('  ▶ '))).toHaveLength(1)
+    expect(lines[lines.length - 1]).toBe(' tap open · 2x back')
   })
 })
 
 describe('buildPickerView', () => {
   const methodOpts = METHODS.map((m) => ({ id: m.id, label: m.label }))
 
-  it('shows the title, marks the selection, and keeps it within the window', () => {
+  it('shows the title, top/bottom rules, marks the selection, and keeps it within the window', () => {
     const lines = buildPickerView('Method', methodOpts, 0).split('\n')
     expect(lines[0]).toBe(' Method')
-    expect(lines).toContain('▶Muslim World League')
-    expect(lines.filter((l) => l.startsWith('▶'))).toHaveLength(1)
+    expect(lines[1]).toMatch(/^─+$/)
+    expect(lines).toContain('  ▶ Muslim World League')
+    expect(lines.filter((l) => l.startsWith('  ▶ '))).toHaveLength(1)
+    expect(lines[lines.length - 1]).toBe(' tap select · 2x back')
   })
 
   it('windows around a deep selection so it stays visible', () => {
     const last = methodOpts.length - 1
     const lines = buildPickerView('Method', methodOpts, last).split('\n')
-    expect(lines).toContain('▶' + methodOpts[last].label)
+    expect(lines).toContain('  ▶ ' + methodOpts[last].label)
   })
 })

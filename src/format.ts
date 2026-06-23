@@ -10,6 +10,14 @@ const NAME_COLUMN = 10
 /** How many rows to show at once in a picker (keeps the highlight on-screen). */
 export const PICKER_WINDOW = 5
 
+/** 4-char row prefix: indent + cursor or indent + blanks. Keeps every row's label aligned. */
+const CURSOR_ON = '  ▶ '
+const CURSOR_OFF = '    '
+/** Indented horizontal divider that visually frames each view. */
+const RULE = '─'.repeat(22)
+/** Approximate target width for left/right footer alignment (font isn't monospaced). */
+const FOOTER_WIDTH = 32
+
 /** Absolute instant → "HH:mm" in the given IANA timezone. */
 export function formatTime(instant: Date, timeZone: string): string {
   return new Intl.DateTimeFormat('en-GB', {
@@ -52,35 +60,54 @@ export function formatHijriDate(instant: Date, timeZone: string): string {
   return `${get('day')} ${get('month')} ${get('year')} AH`
 }
 
-/** Horizontal divider sized to span one line without wrapping in the firmware font. */
-const RULE = '─'.repeat(22)
+/** Hijri "day MonthName" (no year), e.g. "8 Muharram" — fits the consolidated header. */
+export function formatHijriShort(instant: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {
+    timeZone,
+    day: 'numeric',
+    month: 'long',
+  }).formatToParts(instant)
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  return `${get('day')} ${get('month')}`
+}
 
-/** The main prayer-list view: dated header, the five prayers (next marked), footer. */
+function padBetween(left: string, right: string, total: number): string {
+  const gap = Math.max(1, total - left.length - right.length)
+  return left + ' '.repeat(gap) + right
+}
+
+/** The main prayer-list view: dated header, top rule, five prayers, bottom rule, footer. */
 export function buildMainView(s: Schedule, settings: Settings): string {
   const today = s.entries[0]?.time ?? s.nextTime
-  const header = ` ${s.location.name} · ${formatGregorianDate(today, s.location.timeZone)}`
-  const hijri = ` ${formatHijriDate(today, s.location.timeZone)}`
+  const tz = s.location.timeZone
+  const greg = formatGregorianDate(today, tz)
+  const hijri = formatHijriShort(today, tz)
+  const header = ` ${s.location.name} · ${greg} · ${hijri}`
 
   const rows = s.entries.map((e) => {
-    const marker = e.name === s.nextName ? '▶' : ' '
-    let row = marker + e.name.padEnd(NAME_COLUMN) + formatTime(e.time, s.location.timeZone)
+    const cursor = e.name === s.nextName ? CURSOR_ON : CURSOR_OFF
+    let row = cursor + e.name.padEnd(NAME_COLUMN) + formatTime(e.time, tz)
     if (e.name === s.nextName) {
       row += '    in ' + formatCountdown(s.msUntilNext)
     }
     return row
   })
 
-  const footer = ` ${methodShort(settings.method)} · ${madhabShort(settings.madhab)} · tap for settings`
-  return [header, hijri, RULE, ...rows, '', footer].join('\n')
+  const footer = padBetween(
+    ` ${methodShort(settings.method)} · ${madhabShort(settings.madhab)}`,
+    'tap ▷',
+    FOOTER_WIDTH,
+  )
+  return [header, RULE, ...rows, RULE, footer].join('\n')
 }
 
 /** The settings menu — each row shows the setting and its current value. */
 export function buildMenuView(settings: Settings, menuIndex: number): string {
   const rows = MENU_ITEMS.map((item, i) => {
-    const marker = i === menuIndex ? '▶' : ' '
-    return marker + item.label.padEnd(NAME_COLUMN) + item.short(settings)
+    const cursor = i === menuIndex ? CURSOR_ON : CURSOR_OFF
+    return cursor + item.label.padEnd(NAME_COLUMN) + item.short(settings)
   })
-  return [' Settings', '', ...rows, '', ' tap open · 2x back'].join('\n')
+  return [' Settings', RULE, ...rows, RULE, ' tap open · 2x back'].join('\n')
 }
 
 /**
@@ -95,7 +122,7 @@ export function buildPickerView(title: string, options: Option[], index: number)
 
   const rows: string[] = []
   for (let i = start; i < start + windowSize; i++) {
-    rows.push((i === index ? '▶' : ' ') + options[i].label)
+    rows.push((i === index ? CURSOR_ON : CURSOR_OFF) + options[i].label)
   }
-  return [` ${title}`, '', ...rows, '', ' tap select · 2x back'].join('\n')
+  return [` ${title}`, RULE, ...rows, RULE, ' tap select · 2x back'].join('\n')
 }
